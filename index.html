@@ -5,22 +5,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Donasi - Alwaysnyzzz</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* CSS tambahan agar tampilan lebih rapi */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        h2 { color: #333; margin-bottom: 1.5rem; }
+        .input-group { margin-bottom: 1.5rem; text-align: left; }
+        label { display: block; margin-bottom: 0.5rem; color: #666; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #status { margin-top: 1rem; font-size: 14px; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Support Project Kami</h2>
-        <p>Silakan isi nominal donasi Anda di bawah ini.</p>
+
+    <div class="card">
+        <h2>Donasi Nyz-Web</h2>
+        <p style="color: #777; font-size: 14px;">Dukung project Alwaysnyzzz melalui QRIS</p>
         
         <div class="input-group">
-            <label>Nominal (Min. 1000):</label>
-            <input type="number" id="amount" placeholder="Contoh: 10000" min="1000">
+            <label for="amount">Nominal Donasi (Rp)</label>
+            <input type="number" id="amount" placeholder="Minimal 1000" min="1000">
         </div>
 
-        <button onclick="buatDonasi()" id="btn-donasi">Bayar Sekarang</button>
+        <button onclick="prosesDonasi()" id="btn-bayar">Bayar Sekarang</button>
         
-        <div id="result"></div>
+        <div id="status"></div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        async function prosesDonasi() {
+            const amountInput = document.getElementById('amount');
+            const btn = document.getElementById('btn-bayar');
+            const statusDiv = document.getElementById('status');
+            const amount = amountInput.value;
+
+            // Validasi input
+            if (!amount || amount < 1000) {
+                alert("Masukkan nominal minimal Rp 1.000");
+                return;
+            }
+
+            // Loading state
+            btn.disabled = true;
+            btn.innerText = "Memproses...";
+            statusDiv.innerHTML = "Sedang membuat invoice...";
+
+            try {
+                /* PENTING: Kita memanggil '/api/bayar', bukan API Atlantik langsung.
+                   API Key Anda akan ditaruh di Vercel Dashboard, bukan di file ini.
+                */
+                const response = await fetch('/api/bayar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nominal: amount })
+                });
+
+                const data = await response.json();
+
+                if (data.status === true || data.checkout_url) {
+                    statusDiv.innerHTML = "<span style='color:green'>Berhasil! Mengalihkan...</span>";
+                    // Buka link pembayaran (QRIS/Checkout)
+                    window.location.href = data.checkout_url;
+                } else {
+                    statusDiv.innerHTML = "<span style='color:red'>Gagal: " + (data.message || "Terjadi kesalahan") + "</span>";
+                    btn.disabled = false;
+                    btn.innerText = "Bayar Sekarang";
+                }
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerHTML = "<span style='color:red'>Error koneksi ke server!</span>";
+                btn.disabled = false;
+                btn.innerText = "Bayar Sekarang";
+            }
+        }
+    </script>
 </body>
 </html>
